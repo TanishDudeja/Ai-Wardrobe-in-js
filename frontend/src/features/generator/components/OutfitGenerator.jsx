@@ -190,7 +190,7 @@ const OutfitGenerator = () => {
   };
 
   return (
-    <div className="flex-1 bg-white overflow-y-auto min-h-screen relative">
+    <div className="flex-1 bg-white overflow-y-auto min-h-screen relative pb-24 md:pb-0">
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gray-100 rounded-full blur-[100px] opacity-60 -z-10 translate-x-1/2 -translate-y-1/2"></div>
       
       <div className="max-w-5xl mx-auto p-8 lg:p-16">

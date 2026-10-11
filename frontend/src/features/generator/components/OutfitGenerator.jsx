@@ -151,23 +151,50 @@ const OutfitGenerator = () => {
 
   // Determine the best upper-body garment from the generated outfit
   const getTopGarment = (outfit) => {
+    if (!Array.isArray(outfit) || outfit.length === 0) return null;
     const UPPER_BODY_CATEGORIES = ['tops', 'top', 'shirt', 'tshirt', 't-shirt', 'jacket', 'hoodie', 'outerwear', 'blouse', 'sweater'];
     const UPPER_BODY_KEYWORDS = ['shirt', 'tshirt', 't-shirt', 'tee', 'top', 'jacket', 'hoodie', 'blouse', 'sweater', 'cardigan', 'coat'];
     
     // 1. First try to match by category field (most reliable)
     const byCategory = outfit.find(item => 
-      UPPER_BODY_CATEGORIES.includes(item.category?.toLowerCase())
+      UPPER_BODY_CATEGORIES.includes(item?.category?.toLowerCase())
     );
     if (byCategory) return byCategory;
 
     // 2. Fall back to name keyword matching
     const byName = outfit.find(item =>
-      UPPER_BODY_KEYWORDS.some(kw => item.name?.toLowerCase().includes(kw))
+      UPPER_BODY_KEYWORDS.some(kw => item?.name?.toLowerCase().includes(kw))
     );
     if (byName) return byName;
 
     // 3. Last resort: return first item
     return outfit[0];
+  };
+
+  // Determine the best lower-body garment from the generated outfit
+  const getBottomGarment = (outfit) => {
+    if (!Array.isArray(outfit) || outfit.length === 0) return null;
+    const LOWER_BODY_CATEGORIES = ['bottoms', 'bottom', 'pants', 'trousers', 'jeans', 'shorts', 'skirt'];
+    const LOWER_BODY_KEYWORDS = ['pant', 'pants', 'trouser', 'trousers', 'jeans', 'jean', 'shorts', 'short', 'skirt', 'chinos', 'joggers', 'slacks'];
+
+    const top = getTopGarment(outfit);
+
+    // Filter candidate bottoms excluding the chosen top piece if possible
+    const candidates = outfit.length > 1 ? outfit.filter(item => item !== top && item?._id !== top?._id) : outfit;
+
+    // 1. First try category match
+    const byCategory = candidates.find(item =>
+      LOWER_BODY_CATEGORIES.includes(item?.category?.toLowerCase())
+    );
+    if (byCategory) return byCategory;
+
+    // 2. Fall back to name keyword matching
+    const byName = candidates.find(item =>
+      LOWER_BODY_KEYWORDS.some(kw => item?.name?.toLowerCase().includes(kw))
+    );
+    if (byName) return byName;
+
+    return candidates[0] !== top ? candidates[0] : (outfit.length > 1 ? outfit[1] : null);
   };
 
   useEffect(() => {
@@ -255,21 +282,9 @@ const OutfitGenerator = () => {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 180000); // 3 min for two passes
 
-      // 1. Identify clothing items from outfit
-      const UPPER_BODY_CATEGORIES = ['tops', 'top', 'shirt', 'tshirt', 't-shirt', 'jacket', 'hoodie', 'outerwear', 'blouse', 'sweater'];
-      const LOWER_BODY_CATEGORIES = ['bottoms', 'bottom', 'pant', 'pants', 'jeans', 'trousers', 'shorts', 'skirt'];
-      const UPPER_BODY_KEYWORDS = ['shirt', 'tshirt', 't-shirt', 'tee', 'top', 'jacket', 'hoodie', 'blouse', 'sweater', 'cardigan', 'coat'];
-      const LOWER_BODY_KEYWORDS = ['pant', 'pants', 'trouser', 'trousers', 'jeans', 'shorts', 'skirt', 'bottom', 'lower', 'cargo'];
-
-      const topItem = generatedOutfit.find(i => 
-        UPPER_BODY_CATEGORIES.includes(i.category?.toLowerCase()) ||
-        UPPER_BODY_KEYWORDS.some(kw => i.name?.toLowerCase().includes(kw))
-      ) || generatedOutfit[0];
-
-      const bottomItem = generatedOutfit.find(i => 
-        LOWER_BODY_CATEGORIES.includes(i.category?.toLowerCase()) ||
-        LOWER_BODY_KEYWORDS.some(kw => i.name?.toLowerCase().includes(kw))
-      );
+      // 1. Identify clothing items from outfit using unified helpers
+      const topItem = getTopGarment(generatedOutfit) || generatedOutfit[0];
+      const bottomItem = getBottomGarment(generatedOutfit);
 
       let finalResult = null;
 
@@ -559,6 +574,8 @@ const OutfitGenerator = () => {
             {/* Step 3: Results */}
             {step === 3 && !isGenerating && (() => {
               const activeLook = outfitRecommendations[activeOutfitIndex] || (outfitRecommendations.length > 0 ? outfitRecommendations[0] : null);
+              const topPiece = getTopGarment(generatedOutfit);
+              const bottomPiece = getBottomGarment(generatedOutfit);
 
               return (
                 <motion.div key="step3" variants={variants} initial="initial" animate="animate" exit="exit" className="space-y-10">
@@ -651,23 +668,36 @@ const OutfitGenerator = () => {
                       <div className="flex-1 w-full grid grid-cols-2 gap-4">
                         {generatedOutfit.length > 0 ? (
                           <>
-                            <div className="relative group rounded-3xl overflow-hidden aspect-[4/5] shadow-lg bg-white">
-                              <img src={generatedOutfit[0]?.imageUrl} alt={generatedOutfit[0]?.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-                              <div className="absolute bottom-0 inset-x-0 p-4 text-white">
-                                <span className="text-[10px] uppercase font-bold tracking-wider text-gray-300 block">{generatedOutfit[0]?.category}</span>
-                                <p className="font-bold text-base leading-snug">{generatedOutfit[0]?.name}</p>
-                                <p className="text-xs text-gray-300 capitalize">{generatedOutfit[0]?.color}</p>
-                              </div>
-                            </div>
-                            {generatedOutfit[1] ? (
+                            {topPiece ? (
                               <div className="relative group rounded-3xl overflow-hidden aspect-[4/5] shadow-lg bg-white">
-                                <img src={generatedOutfit[1]?.imageUrl} alt={generatedOutfit[1]?.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                <img src={topPiece.imageUrl} alt={topPiece.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                                <span className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider border border-white/20">
+                                  Top Piece
+                                </span>
                                 <div className="absolute bottom-0 inset-x-0 p-4 text-white">
-                                  <span className="text-[10px] uppercase font-bold tracking-wider text-gray-300 block">{generatedOutfit[1]?.category}</span>
-                                  <p className="font-bold text-base leading-snug">{generatedOutfit[1]?.name}</p>
-                                  <p className="text-xs text-gray-300 capitalize">{generatedOutfit[1]?.color}</p>
+                                  <span className="text-[10px] uppercase font-bold tracking-wider text-gray-300 block">{topPiece.category}</span>
+                                  <p className="font-bold text-base leading-snug">{topPiece.name}</p>
+                                  <p className="text-xs text-gray-300 capitalize">{topPiece.color}</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center p-6 text-center text-gray-400">
+                                <p className="text-xs">No top item</p>
+                              </div>
+                            )}
+
+                            {bottomPiece ? (
+                              <div className="relative group rounded-3xl overflow-hidden aspect-[4/5] shadow-lg bg-white">
+                                <img src={bottomPiece.imageUrl} alt={bottomPiece.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                                <span className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider border border-white/20">
+                                  Bottom Piece
+                                </span>
+                                <div className="absolute bottom-0 inset-x-0 p-4 text-white">
+                                  <span className="text-[10px] uppercase font-bold tracking-wider text-gray-300 block">{bottomPiece.category}</span>
+                                  <p className="font-bold text-base leading-snug">{bottomPiece.name}</p>
+                                  <p className="text-xs text-gray-300 capitalize">{bottomPiece.color}</p>
                                 </div>
                               </div>
                             ) : (
@@ -728,17 +758,27 @@ const OutfitGenerator = () => {
                                 </h5>
 
                                 {/* Dual garment preview thumbnail */}
-                                <div className="grid grid-cols-2 gap-2 mb-3">
-                                  {look.items?.map((item, itemIdx) => (
-                                    <div key={item._id || itemIdx} className="relative rounded-2xl overflow-hidden aspect-square bg-gray-50 border border-gray-100">
-                                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent"></div>
-                                      <span className="absolute bottom-1.5 left-2 right-2 text-[10px] font-bold text-white truncate capitalize">
-                                        {item.name}
-                                      </span>
+                                {(() => {
+                                  const lookTop = getTopGarment(look.items || []);
+                                  const lookBottom = getBottomGarment(look.items || []);
+                                  const displayItems = [lookTop, lookBottom].filter(Boolean);
+                                  return (
+                                    <div className="grid grid-cols-2 gap-2 mb-3">
+                                      {displayItems.map((item, itemIdx) => (
+                                        <div key={item._id || itemIdx} className="relative rounded-2xl overflow-hidden aspect-square bg-gray-50 border border-gray-100">
+                                          <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                                          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent"></div>
+                                          <span className="absolute top-1.5 left-1.5 bg-black/60 backdrop-blur-xs text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+                                            {item === lookTop ? 'Top' : 'Bottom'}
+                                          </span>
+                                          <span className="absolute bottom-1.5 left-2 right-2 text-[10px] font-bold text-white truncate capitalize">
+                                            {item.name}
+                                          </span>
+                                        </div>
+                                      ))}
                                     </div>
-                                  ))}
-                                </div>
+                                  );
+                                })()}
 
                                 <p className="text-xs text-gray-500 line-clamp-3 leading-relaxed mb-4 italic bg-gray-50/80 p-3 rounded-xl border border-gray-100">
                                   "{look.styling_reason}"
@@ -872,10 +912,7 @@ const OutfitGenerator = () => {
                 {/* Show which garment will be tried on */}
                 {generatedOutfit.length > 0 && (() => {
                   const top = getTopGarment(generatedOutfit);
-                  const LOWER_BODY_KW = ['pant', 'pants', 'trouser', 'jeans', 'shorts', 'skirt', 'bottom', 'lower'];
-                  const bottom = generatedOutfit.find(item =>
-                    LOWER_BODY_KW.some(kw => item.name?.toLowerCase().includes(kw) || item.category?.toLowerCase().includes(kw))
-                  );
+                  const bottom = getBottomGarment(generatedOutfit);
                   const itemsToTryOn = [top?.name, bottom?.name].filter(Boolean).join(' + ');
                   const activeLookTitle = outfitRecommendations[activeOutfitIndex]?.title || `Look ${activeOutfitIndex + 1}`;
                   

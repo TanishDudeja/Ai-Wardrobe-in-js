@@ -176,8 +176,22 @@ const generateOutfit = async (req, res) => {
       return score;
     };
 
-    const allTops    = availableItems.filter(i => TOP_CATS.includes((i.category || '').toLowerCase()));
-    const allBottoms = availableItems.filter(i => BOTTOM_CATS.includes((i.category || '').toLowerCase()));
+    const BOTTOM_NAME_KW = ['pant', 'pants', 'trouser', 'trousers', 'jeans', 'shorts', 'skirt', 'jogger', 'cargo', 'legging'];
+    const TOP_NAME_KW    = ['shirt', 'tee', 'tshirt', 't-shirt', 'hoodie', 'sweater', 'blazer', 'jacket', 'top', 'blouse'];
+
+    const allTops = availableItems.filter(i => {
+      const cat = (i.category || '').toLowerCase();
+      const name = (i.name || '').toLowerCase();
+      const hasBottomKw = BOTTOM_NAME_KW.some(kw => name.includes(kw));
+      return TOP_CATS.includes(cat) && !hasBottomKw;
+    });
+
+    const allBottoms = availableItems.filter(i => {
+      const cat = (i.category || '').toLowerCase();
+      const name = (i.name || '').toLowerCase();
+      const hasTopKw = TOP_NAME_KW.some(kw => name.includes(kw));
+      return BOTTOM_CATS.includes(cat) && !hasTopKw;
+    });
 
     // Smart exclusion: only exclude previously shown items if it doesn't force a bad pick.
     // For formal occasions especially, never sacrifice appropriateness for novelty.

@@ -1,6 +1,15 @@
 const mongoose = require('mongoose');
 
 const itemSchema = new mongoose.Schema({
+  userId: {
+    type: String,
+    default: null,
+    index: true,
+  },
+  isSample: {
+    type: Boolean,
+    default: false,
+  },
   name: {
     type: String,
     required: true,

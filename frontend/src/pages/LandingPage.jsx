@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../features/auth/context/AuthContext';
 
 const HorizontalScrollCarousel = () => {
   const targetRef = useRef(null);
@@ -52,14 +53,29 @@ const HorizontalScrollCarousel = () => {
 };
 
 const LandingPage = () => {
+  const { user } = useAuth();
+
   return (
     <div className="min-h-screen bg-background text-primary">
       {/* Navigation */}
       <nav className="flex justify-between items-center p-6 lg:px-12 glass sticky top-0 z-50">
-        <div className="text-2xl font-bold tracking-tighter">AI Wardrobe</div>
-        <div className="space-x-4 flex items-center">
-          <Link to="/dashboard" className="px-4 py-2 text-sm font-medium hover:text-accent transition-colors">Log in</Link>
-          <Link to="/dashboard" className="px-5 py-2.5 text-sm font-bold bg-primary text-white rounded-full hover:bg-opacity-90 transition-all shadow-md">Sign up</Link>
+        <Link to="/" className="text-2xl font-bold tracking-tighter hover:opacity-80 transition-opacity">AI Wardrobe</Link>
+        <div className="space-x-3 flex items-center">
+          {user ? (
+            <div className="flex items-center gap-3">
+              <span className="hidden sm:inline text-xs font-semibold text-gray-600">
+                Hi, <span className="font-bold text-gray-900">{user.user_metadata?.full_name || user.email?.split('@')[0]}</span>
+              </span>
+              <Link to="/dashboard" className="px-5 py-2.5 text-sm font-bold bg-primary text-white rounded-full hover:bg-opacity-90 transition-all shadow-md">
+                Go to Dashboard →
+              </Link>
+            </div>
+          ) : (
+            <>
+              <Link to="/login" className="px-4 py-2 text-sm font-medium hover:text-accent transition-colors">Log in</Link>
+              <Link to="/signup" className="px-5 py-2.5 text-sm font-bold bg-primary text-white rounded-full hover:bg-opacity-90 transition-all shadow-md">Sign up</Link>
+            </>
+          )}
         </div>
       </nav>
 

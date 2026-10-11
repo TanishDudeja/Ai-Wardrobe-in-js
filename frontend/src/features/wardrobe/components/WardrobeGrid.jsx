@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import ItemCard from './ItemCard';
-import { UploadCloud, X, Loader2, Search, SlidersHorizontal, Grid3X3, LayoutList, Sparkles } from 'lucide-react';
+import { UploadCloud, X, Loader2, Search, SlidersHorizontal, Grid3X3, LayoutList, Sparkles, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../../auth/context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -9,6 +11,7 @@ const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Outerwear', 'Shoes'];
 const SORT_OPTIONS = ['Newest First', 'Oldest First', 'Name A-Z', 'Name Z-A'];
 
 const WardrobeGrid = ({ onSelectItem }) => {
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
@@ -25,6 +28,7 @@ const WardrobeGrid = ({ onSelectItem }) => {
   const [category, setCategory] = useState('');
   const [color, setColor] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [ownershipFilter, setOwnershipFilter] = useState('all'); // 'all' | 'mine' | 'starter'
   const [uploadError, setUploadError] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
@@ -32,9 +36,12 @@ const WardrobeGrid = ({ onSelectItem }) => {
   const fetchItems = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_URL}/api/wardrobe`);
+      const url = user?.id 
+        ? `${API_URL}/api/wardrobe?userId=${encodeURIComponent(user.id)}`
+        : `${API_URL}/api/wardrobe`;
+      const res = await fetch(url);
       const data = await res.json();
-      setItems(data);
+      setItems(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to fetch wardrobe:', error);
     } finally {
@@ -42,7 +49,20 @@ const WardrobeGrid = ({ onSelectItem }) => {
     }
   };
 
-  useEffect(() => { fetchItems(); }, []);
+  useEffect(() => { 
+    fetchItems(); 
+
+    const handleOpenUpload = () => setShowUpload(true);
+    const handleWardrobeUpdated = () => fetchItems();
+
+    window.addEventListener('open_upload_modal', handleOpenUpload);
+    window.addEventListener('wardrobe_updated', handleWardrobeUpdated);
+
+    return () => {
+      window.removeEventListener('open_upload_modal', handleOpenUpload);
+      window.removeEventListener('wardrobe_updated', handleWardrobeUpdated);
+    };
+  }, [user?.id]);
 
   const handleFileChange = (e) => {
     const selected = e.target.files[0];
@@ -68,6 +88,9 @@ const WardrobeGrid = ({ onSelectItem }) => {
     formData.append('name', name);
     formData.append('category', category);
     formData.append('color', color);
+    if (user?.id) {
+      formData.append('userId', user.id);
+    }
     try {
       const res = await fetch(`${API_URL}/api/wardrobe`, { method: 'POST', body: formData });
       if (res.ok) {
@@ -100,7 +123,13 @@ const WardrobeGrid = ({ onSelectItem }) => {
       const matchesCategory = activeFilter === 'All' || item.category?.toLowerCase() === activeFilter.toLowerCase();
       const matchesSearch = item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.color?.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
+      const matchesOwnership =
+        ownershipFilter === 'all'
+          ? true
+          : ownershipFilter === 'mine'
+          ? !!item.userId && item.userId === user?.id
+          : !item.userId;
+      return matchesCategory && matchesSearch && matchesOwnership;
     })
     .sort((a, b) => {
       if (sortBy === 'Name A-Z') return a.name.localeCompare(b.name);
@@ -108,6 +137,9 @@ const WardrobeGrid = ({ onSelectItem }) => {
       if (sortBy === 'Oldest First') return new Date(a.createdAt) - new Date(b.createdAt);
       return new Date(b.createdAt) - new Date(a.createdAt); // Newest First
     });
+
+  const myItemsCount = items.filter(i => !!i.userId && i.userId === user?.id).length;
+  const starterItemsCount = items.filter(i => !i.userId).length;
 
   // Category counts
   const categoryCounts = CATEGORIES.reduce((acc, cat) => {
@@ -122,22 +154,67 @@ const WardrobeGrid = ({ onSelectItem }) => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h2 className="text-3xl font-extrabold text-primary mb-1">My Closet</h2>
+            <h2 className="text-3xl font-extrabold text-primary mb-1">
+              {user ? (
+                <>Welcome back, <span className="text-accent">{user.user_metadata?.full_name || user.email?.split('@')[0]}</span> 👋</>
+              ) : (
+                'My Digital Closet'
+              )}
+            </h2>
             <p className="text-gray-500">
-              {items.length} items digitized
-              {searchQuery || activeFilter !== 'All' ? ` · ${filteredItems.length} showing` : ''}
+              {user ? (
+                <>{items.length} garments organized in your personal wardrobe</>
+              ) : (
+                'Sign in to access, digitize, and style your private clothes'
+              )}
+              {user && (searchQuery || activeFilter !== 'All') ? ` · ${filteredItems.length} showing` : ''}
             </p>
           </div>
-          <button
-            onClick={() => setShowUpload(true)}
-            className="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-full font-bold hover:bg-gray-900 transition-all hover:shadow-lg hover:-translate-y-0.5 self-start md:self-auto"
-          >
-            <Sparkles size={16} /> Add Item
-          </button>
+          {user ? (
+            <button
+              onClick={() => setShowUpload(true)}
+              className="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-full font-bold hover:bg-gray-900 transition-all hover:shadow-lg hover:-translate-y-0.5 self-start md:self-auto"
+            >
+              <Sparkles size={16} /> Add Item
+            </button>
+          ) : (
+            <Link
+              to="/login"
+              className="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-full font-bold hover:bg-gray-900 transition-all hover:shadow-lg hover:-translate-y-0.5 self-start md:self-auto text-sm"
+            >
+              <Lock size={15} /> Sign In to Access
+            </Link>
+          )}
         </div>
 
-        {/* Search + Controls */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        {!user ? (
+          <div className="bg-white rounded-3xl p-10 sm:p-14 border border-gray-100 shadow-sm text-center max-w-xl mx-auto my-12 animate-in fade-in duration-300">
+            <div className="w-16 h-16 rounded-2xl bg-gray-100 text-gray-700 mx-auto flex items-center justify-center mb-5 shadow-xs">
+              <Lock size={28} />
+            </div>
+            <h3 className="text-2xl font-black text-gray-900 mb-2">Your Wardrobe is Private</h3>
+            <p className="text-sm text-gray-500 mb-6 leading-relaxed max-w-md mx-auto">
+              Your garments are securely tied to your personal styling account. Sign in or register to view your closet, digitize garments, and generate AI outfits.
+            </p>
+            <div className="flex items-center justify-center gap-3">
+              <Link
+                to="/login"
+                className="px-6 py-3 bg-primary text-white text-xs font-bold rounded-2xl hover:bg-gray-800 transition-colors shadow-sm"
+              >
+                Sign In to Closet
+              </Link>
+              <Link
+                to="/signup"
+                className="px-6 py-3 bg-white border border-gray-200 text-gray-800 text-xs font-bold rounded-2xl hover:bg-gray-50 transition-colors"
+              >
+                Create Account
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Search + Controls */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-6">
           {/* Search */}
           <div className="relative flex-1">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -199,6 +276,42 @@ const WardrobeGrid = ({ onSelectItem }) => {
             </button>
           </div>
         </div>
+
+        {/* Ownership Scope Tabs (When logged in) */}
+        {user && (
+          <div className="flex items-center gap-2 mb-4 bg-gray-100/80 p-1 rounded-2xl w-fit">
+            <button
+              onClick={() => setOwnershipFilter('all')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                ownershipFilter === 'all'
+                  ? 'bg-white text-primary shadow-xs'
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              All Garments ({items.length})
+            </button>
+            <button
+              onClick={() => setOwnershipFilter('mine')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                ownershipFilter === 'mine'
+                  ? 'bg-white text-primary shadow-xs'
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              My Uploads ({myItemsCount})
+            </button>
+            <button
+              onClick={() => setOwnershipFilter('starter')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                ownershipFilter === 'starter'
+                  ? 'bg-white text-primary shadow-xs'
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              Starter Catalog ({starterItemsCount})
+            </button>
+          </div>
+        )}
 
         {/* Category Filters */}
         <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
@@ -273,6 +386,8 @@ const WardrobeGrid = ({ onSelectItem }) => {
             </AnimatePresence>
           </motion.div>
         )}
+          </>
+        )}
       </div>
 
       {/* Upload Modal */}
@@ -301,13 +416,40 @@ const WardrobeGrid = ({ onSelectItem }) => {
                 </button>
               </div>
 
-              <form onSubmit={handleUploadSubmit} className="p-8 flex flex-col md:flex-row gap-8">
+              {!user ? (
+                <div className="p-10 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4 text-gray-700 shadow-xs">
+                    <Lock size={26} />
+                  </div>
+                  <h4 className="text-xl font-bold text-gray-900 mb-2">Account Required</h4>
+                  <p className="text-sm text-gray-500 max-w-sm mx-auto mb-6 leading-relaxed">
+                    Please sign in or create an account to upload and save personal garments to your digital closet.
+                  </p>
+                  <div className="flex justify-center gap-3">
+                    <Link
+                      to="/login"
+                      onClick={() => setShowUpload(false)}
+                      className="px-6 py-3 bg-primary text-white text-xs font-bold rounded-xl hover:bg-gray-800 transition-colors shadow-sm"
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      to="/signup"
+                      onClick={() => setShowUpload(false)}
+                      className="px-6 py-3 bg-white border border-gray-200 text-gray-800 text-xs font-bold rounded-xl hover:bg-gray-50 transition-colors"
+                    >
+                      Create Account
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleUploadSubmit} className="p-8 flex flex-col md:flex-row gap-8">
 
-                {/* Left: Image Drop Zone */}
-                <div className="flex-1 flex flex-col">
-                  <input type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef} className="hidden" />
-                  <div
-                    onClick={() => fileInputRef.current.click()}
+                  {/* Left: Image Drop Zone */}
+                  <div className="flex-1 flex flex-col">
+                    <input type="file" accept="image/*" onChange={handleFileChange} ref={fileInputRef} className="hidden" />
+                    <div
+                      onClick={() => fileInputRef.current.click()}
                     onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                     onDragLeave={() => setIsDragging(false)}
                     onDrop={handleDrop}
@@ -384,8 +526,9 @@ const WardrobeGrid = ({ onSelectItem }) => {
                   </button>
                 </div>
               </form>
-            </motion.div>
+            )}
           </motion.div>
+        </motion.div>
         )}
       </AnimatePresence>
     </div>

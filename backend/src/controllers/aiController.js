@@ -69,32 +69,78 @@ const generateOutfit = async (req, res) => {
 
     // Keywords that score positively/negatively per style
     const STYLE_RULES = {
-      Streetwear: {
-        topPos:    ['graphic', 'tee', 'tshirt', 't-shirt', 'print', 'logo', 'oversized', 'hoodie', 'sweat'],
-        topNeg:    ['shirt', 'formal', 'dress', 'button'],
-        bottomPos: ['cargo', 'jogger', 'baggy', 'wide', 'denim', 'jeans', 'shorts'],
-        bottomNeg: ['trouser', 'formal', 'dress', 'chino', 'slim'],
-        colorPos:  ['black', 'grey', 'navy', 'white', 'brown', 'beige', 'khaki', 'olive'],
+      'Corporate': {
+        topPos:    ['shirt', 'button', 'oxford', 'formal', 'dress', 'blazer', 'collar', 'suit'],
+        topNeg:    ['graphic', 'tee', 'tshirt', 'hoodie', 'sweat', 'oversized', 'cargo', 'shorts'],
+        bottomPos: ['trouser', 'formal', 'dress', 'pant', 'pants', 'slack', 'chino'],
+        bottomNeg: ['cargo', 'jogger', 'shorts', 'baggy', 'ripped', 'jeans', 'denim'],
+        colorPos:  ['black', 'navy', 'white', 'grey', 'charcoal', 'beige'],
       },
-      Minimalist: {
-        topPos:    ['plain', 'solid', 'basic', 'simple', 'shirt', 'tee'],
-        topNeg:    ['graphic', 'print', 'logo', 'pattern', 'floral'],
+      'Smart Casual': {
+        topPos:    ['shirt', 'button', 'polo', 'oxford', 'collar', 'knit', 'blazer', 'tee', 'plain'],
+        topNeg:    ['graphic', 'hoodie', 'sweat', 'ripped', 'oversized'],
+        bottomPos: ['chino', 'trouser', 'pant', 'pants', 'slim', 'straight', 'khaki'],
+        bottomNeg: ['cargo', 'jogger', 'shorts', 'baggy', 'ripped'],
+        colorPos:  ['navy', 'beige', 'white', 'black', 'grey', 'brown', 'khaki', 'olive'],
+      },
+      'Minimalist': {
+        topPos:    ['plain', 'solid', 'basic', 'simple', 'shirt', 'tee', 'clean'],
+        topNeg:    ['graphic', 'print', 'logo', 'pattern', 'floral', 'loud'],
         bottomPos: ['chino', 'trouser', 'slim', 'straight', 'plain', 'pants'],
         bottomNeg: ['cargo', 'jogger', 'baggy', 'ripped', 'printed'],
         colorPos:  ['black', 'white', 'grey', 'navy', 'beige', 'cream', 'off-white', 'charcoal'],
       },
-      Classic: {
+      'Streetwear': {
+        topPos:    ['graphic', 'tee', 'tshirt', 't-shirt', 'print', 'logo', 'oversized', 'hoodie', 'sweat'],
+        topNeg:    ['formal', 'dress', 'blazer', 'suit'],
+        bottomPos: ['cargo', 'jogger', 'baggy', 'wide', 'denim', 'jeans', 'shorts'],
+        bottomNeg: ['trouser', 'formal', 'dress', 'slack'],
+        colorPos:  ['black', 'grey', 'navy', 'white', 'brown', 'beige', 'khaki', 'olive'],
+      },
+      'Casual': {
+        topPos:    ['tee', 'tshirt', 'polo', 'shirt', 'casual', 'plain'],
+        topNeg:    ['formal', 'dress', 'blazer', 'suit'],
+        bottomPos: ['jeans', 'chino', 'pant', 'pants', 'shorts', 'denim'],
+        bottomNeg: ['formal', 'dress', 'slack'],
+        colorPos:  ['blue', 'navy', 'white', 'grey', 'beige', 'black'],
+      },
+      'Classic': {
         topPos:    ['shirt', 'button', 'oxford', 'polo', 'formal', 'dress', 'blazer'],
-        topNeg:    ['graphic', 'tee', 'hoodie', 'sweat', 'oversized'],
+        topNeg:    ['graphic', 'hoodie', 'sweat', 'oversized'],
         bottomPos: ['trouser', 'chino', 'dress', 'straight', 'formal', 'pants'],
-        bottomNeg: ['cargo', 'jogger', 'shorts', 'baggy', 'ripped', 'jeans'],
+        bottomNeg: ['cargo', 'jogger', 'shorts', 'baggy', 'ripped'],
         colorPos:  ['black', 'navy', 'white', 'grey', 'khaki', 'beige', 'brown'],
+      },
+      'Athleisure': {
+        topPos:    ['tee', 'tshirt', 'hoodie', 'sweat', 'tank', 'track', 'sport'],
+        topNeg:    ['shirt', 'formal', 'dress', 'button', 'blazer'],
+        bottomPos: ['jogger', 'shorts', 'track', 'sweat', 'athletic'],
+        bottomNeg: ['trouser', 'formal', 'dress', 'chino', 'slack'],
+        colorPos:  ['black', 'grey', 'navy', 'white', 'olive'],
+      },
+      'Sporty': {
+        topPos:    ['active', 'sport', 'tee', 'tshirt', 'dry', 'tank', 'running'],
+        topNeg:    ['shirt', 'formal', 'dress', 'button', 'blazer', 'knit'],
+        bottomPos: ['shorts', 'jogger', 'track', 'running', 'sport', 'athletic'],
+        bottomNeg: ['trouser', 'formal', 'dress', 'chino', 'slack', 'jeans', 'denim'],
+        colorPos:  ['black', 'grey', 'navy', 'white', 'blue'],
       },
     };
 
-    const rules = STYLE_RULES[style] || {
-      topPos: [], topNeg: [], bottomPos: [], bottomNeg: [], colorPos: [],
+    const resolveRules = (s) => {
+      if (STYLE_RULES[s]) return STYLE_RULES[s];
+      const norm = (s || '').toLowerCase();
+      if (norm.includes('corporate') || norm.includes('formal') || norm.includes('executive')) return STYLE_RULES['Corporate'];
+      if (norm.includes('smart') || norm.includes('refined')) return STYLE_RULES['Smart Casual'];
+      if (norm.includes('street') || norm.includes('edgy') || norm.includes('tropical') || norm.includes('party')) return STYLE_RULES['Streetwear'];
+      if (norm.includes('sport') || norm.includes('performance') || norm.includes('gym')) return STYLE_RULES['Sporty'];
+      if (norm.includes('athleisure') || norm.includes('jogger')) return STYLE_RULES['Athleisure'];
+      if (norm.includes('casual') || norm.includes('linen') || norm.includes('outdoor')) return STYLE_RULES['Casual'];
+      if (norm.includes('classic') || norm.includes('evening')) return STYLE_RULES['Classic'];
+      return STYLE_RULES['Minimalist'];
     };
+
+    const rules = resolveRules(style);
 
     // Occasion formality modifier
     const FORMAL_OCCASIONS = ['Business Meeting', 'Smart Dinner'];
@@ -151,51 +197,153 @@ const generateOutfit = async (req, res) => {
       return res.status(400).json({ message: 'No tops or bottoms found in wardrobe.' });
     }
 
-    // Pick randomly from top candidates within a score threshold.
-    const pickFromCandidates = (items, posKw, negKw) => {
-      if (items.length === 0) return null;
-      if (items.length === 1) return items[0];
-      const scored = items
-        .map(item => ({ item, score: scoreItem(item, posKw, negKw) }))
-        .sort((a, b) => b.score - a.score);
-      const best = scored[0].score;
-      // Narrow candidate pool to within 3 points of the best score
-      const candidates = scored.filter(s => s.score >= best - 3).map(s => s.item);
-      return candidates[Math.floor(Math.random() * candidates.length)];
-    };
+    // Rank tops and bottoms by score
+    const scoredTops = tops
+      .map(item => ({ item, score: scoreItem(item, rules.topPos, rules.topNeg) }))
+      .sort((a, b) => b.score - a.score);
 
-    const bestTop    = pickFromCandidates(tops,    rules.topPos,    rules.topNeg);
-    const bestBottom = pickFromCandidates(bottoms, rules.bottomPos, rules.bottomNeg);
+    const scoredBottoms = bottoms
+      .map(item => ({ item, score: scoreItem(item, rules.bottomPos, rules.bottomNeg) }))
+      .sort((a, b) => b.score - a.score);
 
-    const selectedItems = [bestTop, bestBottom].filter(Boolean);
-    const selectedIds   = selectedItems.map(i => String(i._id));
-
-    console.log(`Selection for [${style}/${occasion}]:`, selectedItems.map(i => `${i.name}(${scoreItem(i, rules.bottomPos, rules.bottomNeg)})`));
-
-
-
-    // ── AI: Generate styling reason ONLY ──────────────────────────────────────
-    let stylingReason = '';
-    try {
-      const itemSummary = selectedItems.map(i => `${i.color} ${i.name} (${i.category})`).join(' + ');
-      const reasonMessages = [
-        { role: 'system', content: 'You are a fashion copywriter. Write vivid, concise outfit descriptions. Return only the description text, no JSON.' },
-        { role: 'user', content: `Write a 2-sentence styling note for this outfit: ${itemSummary}. Occasion: ${occasion}. Style: ${style}. Explain why these specific items and colors work together for this occasion. Be specific, not generic.` }
-      ];
-      const completion = await callGroqWithFallback(reasonMessages);
-      stylingReason = completion.choices[0]?.message?.content?.trim() || '';
-      // Strip any stray think blocks
-      const thinkEnd = stylingReason.lastIndexOf('</think>');
-      if (thinkEnd !== -1) stylingReason = stylingReason.substring(thinkEnd + 8).trim();
-    } catch (reasonErr) {
-      console.warn('Could not generate styling reason:', reasonErr.message);
-      stylingReason = `A ${style.toLowerCase()} outfit perfectly curated for ${occasion}.`;
+    // Generate all viable candidate pairs
+    const allPairs = [];
+    if (scoredTops.length > 0 && scoredBottoms.length > 0) {
+      for (const t of scoredTops) {
+        for (const b of scoredBottoms) {
+          const comboScore = t.score + b.score;
+          allPairs.push({
+            top: t.item,
+            bottom: b.item,
+            topScore: t.score,
+            bottomScore: b.score,
+            totalScore: comboScore
+          });
+        }
+      }
+      allPairs.sort((a, b) => b.totalScore - a.totalScore);
+    } else if (scoredTops.length > 0) {
+      scoredTops.forEach(t => allPairs.push({ top: t.item, bottom: null, totalScore: t.score }));
+    } else {
+      scoredBottoms.forEach(b => allPairs.push({ top: null, bottom: b.item, totalScore: b.score }));
     }
+
+    if (allPairs.length === 0) {
+      return res.status(400).json({ message: 'No valid outfit combinations could be formed.' });
+    }
+
+    // Pick up to 3 diverse, distinct combinations
+    const selectedPairs = [];
+    const seenPairs = new Set();
+    const pairKey = (p) => `${p.top?._id || 'none'}_${p.bottom?._id || 'none'}`;
+
+    // 1. Primary combination (highest score)
+    const best = allPairs[0];
+    selectedPairs.push(best);
+    seenPairs.add(pairKey(best));
+
+    // 2. Alternative combination: prefer a different top or bottom
+    const alt1 = allPairs.find(p => 
+      !seenPairs.has(pairKey(p)) && 
+      ((p.top?._id !== best.top?._id && p.bottom?._id === best.bottom?._id) || 
+       (p.bottom?._id !== best.bottom?._id && p.top?._id === best.top?._id))
+    ) || allPairs.find(p => !seenPairs.has(pairKey(p)));
+
+    if (alt1) {
+      selectedPairs.push(alt1);
+      seenPairs.add(pairKey(alt1));
+    }
+
+    // 3. Third combination: prefer another distinct variation
+    const alt2 = allPairs.find(p => 
+      !seenPairs.has(pairKey(p)) &&
+      p.top?._id !== best.top?._id && 
+      p.bottom?._id !== (alt1?.bottom?._id || best.bottom?._id)
+    ) || allPairs.find(p => !seenPairs.has(pairKey(p)));
+
+    if (alt2) {
+      selectedPairs.push(alt2);
+      seenPairs.add(pairKey(alt2));
+    }
+
+    // Meta details for looks
+    const LOOK_CONFIG = [
+      { id: 'look_1', title: 'Look 1: Signature Pairing', badge: 'Top Match', baseScore: 98 },
+      { id: 'look_2', title: 'Look 2: Contemporary Alternative', badge: 'Modern Twist', baseScore: 94 },
+      { id: 'look_3', title: 'Look 3: Versatile Contrast', badge: 'Casual Shift', baseScore: 89 },
+    ];
+
+    // ── AI: Generate styling reasons for the combinations ───────────────────────
+    let reasonsMap = {};
+    try {
+      const summaryText = selectedPairs.map((p, idx) => {
+        const items = [p.top, p.bottom].filter(Boolean);
+        return `Look ${idx + 1}: ${items.map(i => `${i.color} ${i.name} (${i.category})`).join(' + ')}`;
+      }).join('\n');
+
+      const reasonMessages = [
+        {
+          role: 'system',
+          content: 'You are an elite fashion copywriter. Return ONLY valid JSON in format: {"look_1": "1-2 sentence note", "look_2": "1-2 sentence note", "look_3": "1-2 sentence note"}. No thinking blocks, no markdown formatting outside JSON.'
+        },
+        {
+          role: 'user',
+          content: `Occasion: ${occasion}. Aesthetic: ${style}.\nOutfit Combinations:\n${summaryText}\nProvide a sharp 1-2 sentence styling note for each look explaining why the colors and silhouettes fit the occasion.`
+        }
+      ];
+
+      const completion = await callGroqWithFallback(reasonMessages);
+      let rawContent = completion.choices[0]?.message?.content?.trim() || '';
+
+      // Strip think tags if present
+      const thinkEnd = rawContent.lastIndexOf('</think>');
+      if (thinkEnd !== -1) rawContent = rawContent.substring(thinkEnd + 8).trim();
+
+      // Extract JSON if wrapped in markdown code fence
+      const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        reasonsMap = JSON.parse(jsonMatch[0]);
+      }
+    } catch (reasonErr) {
+      console.warn('Could not generate multi-look styling reasons via Groq:', reasonErr.message);
+    }
+
+    // Build finalized outfits list
+    const outfits = selectedPairs.map((p, idx) => {
+      const config = LOOK_CONFIG[idx] || {
+        id: `look_${idx + 1}`,
+        title: `Look ${idx + 1}: Curated Styling`,
+        badge: 'Recommended',
+        baseScore: Math.max(80, 95 - idx * 5)
+      };
+
+      const items = [p.top, p.bottom].filter(Boolean);
+      const lookKey = `look_${idx + 1}`;
+      
+      const fallbackReason = items.length === 2
+        ? `${items[0].color} ${items[0].name} paired with ${items[1].color} ${items[1].name} offers a sharp, balanced silhouette aligned with ${occasion}.`
+        : `A refined ${style.toLowerCase()} piece chosen to complement your ${occasion} plans.`;
+
+      const stylingNote = (reasonsMap[lookKey] || reasonsMap[config.id] || fallbackReason).trim();
+
+      return {
+        id: config.id,
+        title: config.title,
+        badge: config.badge,
+        matchScore: config.baseScore,
+        selected_ids: items.map(i => String(i._id)),
+        items: items,
+        styling_reason: stylingNote,
+      };
+    });
+
+    console.log(`Generated ${outfits.length} combinations for [${style}/${occasion}]`);
 
     return res.json({
       success: true,
-      selected_ids: selectedIds,
-      styling_reason: stylingReason,
+      outfits,
+      selected_ids: outfits[0]?.selected_ids || [],
+      styling_reason: outfits[0]?.styling_reason || `A curated ${style} look for ${occasion}.`
     });
 
   } catch (error) {
@@ -205,75 +353,114 @@ const generateOutfit = async (req, res) => {
 };
 
 
-// @desc    Full-body try-on via IDM-VTON (upper) and OOTDiffusion (lower)
+// @desc    Virtual try-on via CatVTON (supports upper, lower, and full-body)
 // @route   POST /api/ai/try-on
 // @access  Public
 const generateTryOn = async (req, res) => {
   try {
-    const { garmentUrl, garmentName } = req.body;
-    const humanImageUrl = req.file?.path;
+    const { garmentUrl, garmentName, garmentImageUrl, category } = req.body;
+    const uploadedFile = req.file || (Array.isArray(req.files) ? req.files[0] : null);
+    const humanImageUrl = uploadedFile?.path;
+    const finalGarmentUrl = garmentUrl || garmentImageUrl;
+    const finalGarmentName = garmentName || 'Garment';
 
     if (!humanImageUrl) {
-      return res.status(400).json({ message: 'Please upload a human image.' });
+      return res.status(400).json({ message: 'Please upload a photo of yourself.' });
     }
-    if (!garmentUrl) {
+    if (!finalGarmentUrl) {
       return res.status(400).json({ message: 'Garment image URL is required.' });
     }
 
-    console.log(`Starting try-on: garment="${garmentName}"`);
+    // Detect garment category from explicit param or name/metadata
+    const nameLower = (finalGarmentName || '').toLowerCase();
+    const LOWER_KW = ['pant', 'pants', 'trouser', 'jeans', 'shorts', 'skirt', 'bottom', 'lower'];
+    const DRESS_KW = ['dress', 'gown', 'overall', 'jumpsuit', 'romper', 'outfit'];
+    
+    let clothType = category || 'upper';
+    if (category === 'lower' || LOWER_KW.some(kw => nameLower.includes(kw))) {
+      clothType = 'lower';
+    } else if (category === 'overall' || DRESS_KW.some(kw => nameLower.includes(kw))) {
+      clothType = 'overall';
+    }
 
-    // Use HF token if configured (provides significantly more GPU quota)
-    const hfOptions = process.env.HF_TOKEN ? { hf_token: process.env.HF_TOKEN } : {};
-
-    const LOWER_BODY_KW = ['pant', 'pants', 'trouser', 'jeans', 'shorts', 'skirt', 'bottom', 'lower'];
-    const isLowerBody = LOWER_BODY_KW.some(kw => (garmentName || '').toLowerCase().includes(kw));
+    console.log(`Starting VTON try-on: garment="${finalGarmentName}", type=${clothType}, humanUrl=${humanImageUrl.slice(0, 40)}...`);
 
     let hfImageUrl = null;
-    let result;
 
-    if (isLowerBody) {
-      console.log('Routing to OOTDiffusion for lower-body garment...');
-      const app = await client('levihsu/OOTDiffusion', hfOptions);
-      result = await app.predict('/process_dc', [
+    // 1. Primary Engine: Kwai-Kolors Virtual Try-On (Dedicated cluster, zero ZeroGPU quota limit)
+    try {
+      console.log('Attempting Kwai-Kolors Virtual Try-On...');
+      const app = await client('Kwai-Kolors/Kolors-Virtual-Try-On');
+      const result = await app.predict(2, [
         handle_file(humanImageUrl),
-        handle_file(garmentUrl),
-        'Lower-body',
-        1, 20, 2, -1
+        handle_file(finalGarmentUrl),
+        0,
+        true
       ]);
-      const hfImage = result?.data?.[0];
-      hfImageUrl = (Array.isArray(hfImage) && hfImage[0]?.image?.url)
-        ? hfImage[0].image.url
-        : hfImage?.url || (typeof hfImage === 'string' ? hfImage : null);
-    } else {
-      console.log('Routing to IDM-VTON for upper-body garment...');
-      const garmentDescription = garmentName || 'A fashionable piece of clothing';
-      const app = await client('yisol/IDM-VTON', hfOptions);
-      result = await app.predict('/tryon', [
-        { background: handle_file(humanImageUrl), layers: [], composite: null },
-        handle_file(garmentUrl),
-        garmentDescription,
-        true, false, 30, 42
-      ]);
-      const hfImage = result?.data?.[0];
-      hfImageUrl = hfImage?.url || (typeof hfImage === 'string' ? hfImage : null);
+      const resItem = result?.data?.[0];
+      if (resItem?.url) {
+        hfImageUrl = resItem.url;
+      } else if (typeof resItem === 'string') {
+        hfImageUrl = resItem;
+      }
+      if (hfImageUrl) {
+        console.log('Kwai-Kolors generated successfully!');
+      }
+    } catch (kolorsErr) {
+      console.warn('Kwai-Kolors failed, using fallback:', kolorsErr.message);
+    }
+
+    // 2. Fallback Engine: IDM-VTON / OOTDiffusion
+    if (!hfImageUrl) {
+      const hfOptions = process.env.HF_TOKEN ? { hf_token: process.env.HF_TOKEN } : {};
+      if (clothType === 'lower') {
+        console.log('Fallback: Using OOTDiffusion for lower-body garment...');
+        const app = await client('levihsu/OOTDiffusion', hfOptions);
+        const result = await app.predict('/process_dc', [
+          handle_file(humanImageUrl),
+          handle_file(finalGarmentUrl),
+          'Lower-body',
+          1, 20, 2, -1
+        ]);
+        const hfImage = result?.data?.[0];
+        if (Array.isArray(hfImage) && hfImage[0]?.image?.url) {
+          hfImageUrl = hfImage[0].image.url;
+        } else if (hfImage?.url) {
+          hfImageUrl = hfImage.url;
+        } else if (typeof hfImage === 'string') {
+          hfImageUrl = hfImage;
+        }
+      } else {
+        console.log('Fallback: Using IDM-VTON for upper-body garment...');
+        const garmentDescription = finalGarmentName || 'A fashionable piece of clothing';
+        const app = await client('yisol/IDM-VTON', hfOptions);
+        const result = await app.predict('/tryon', [
+          { background: handle_file(humanImageUrl), layers: [], composite: null },
+          handle_file(finalGarmentUrl),
+          garmentDescription,
+          true, false, 30, 42
+        ]);
+        const hfImage = result?.data?.[0];
+        hfImageUrl = hfImage?.url || (typeof hfImage === 'string' ? hfImage : null);
+      }
     }
 
     if (!hfImageUrl) {
-      console.error('Unexpected HuggingFace response:', JSON.stringify(result?.data));
-      throw new Error('HuggingFace returned an unexpected response format. The model may be overloaded — please try again.');
+      throw new Error('AI Model did not return an image URL. Please retry.');
     }
 
-    // Download image and convert to base64 so CORS / auth tokens are never an issue for the frontend
+    // Download and encode as base64 for safe frontend rendering
     const imgResponse = await axios.get(hfImageUrl, {
       responseType: 'arraybuffer',
-      timeout: 60000  // 60s download timeout
+      timeout: 60000
     });
     const base64Image = `data:image/jpeg;base64,${Buffer.from(imgResponse.data).toString('base64')}`;
 
-    console.log('Try-on inference complete!');
+    console.log(`VTON inference complete! (${clothType})`);
     return res.json({
       success: true,
-      image_url: base64Image
+      image_url: base64Image,
+      resultImageUrl: base64Image
     });
 
   } catch (error) {

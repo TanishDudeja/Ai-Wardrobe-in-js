@@ -7,6 +7,7 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 const wardrobeRoutes = require('./routes/wardrobeRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 // Connect to database
 connectDB();
@@ -20,6 +21,7 @@ app.use(express.json());
 // Routes
 app.use('/api/wardrobe', wardrobeRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/auth', authRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

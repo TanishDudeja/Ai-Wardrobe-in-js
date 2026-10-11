@@ -39,6 +39,20 @@ const ItemCard = ({ item, onClick, onDelete }) => {
         />
         {/* Hover overlay with delete button */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
+        
+        {/* Ownership badge */}
+        <div className="absolute top-3 left-3">
+          {item.userId ? (
+            <span className="bg-primary/80 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-xs">
+              My Garment
+            </span>
+          ) : (
+            <span className="bg-white/80 backdrop-blur-md text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-xs">
+              Starter
+            </span>
+          )}
+        </div>
+
         <button
           onClick={handleDelete}
           className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-red-50 hover:text-red-500 shadow-md"

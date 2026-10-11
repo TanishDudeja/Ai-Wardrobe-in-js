@@ -49,10 +49,12 @@ export const AuthProvider = ({ children }) => {
     return () => subscription?.unsubscribe?.();
   }, []);
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
   const signUp = async (email, password, metadata = {}) => {
     try {
-      // 1. Register through pre-confirmed backend endpoint so no email verification email is needed
-      const res = await fetch('http://localhost:5000/api/auth/register', {
+      // 1. Register through pre-confirmed backend endpoint (bypasses Supabase SMTP email rate limits)
+      const res = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -71,6 +73,12 @@ export const AuthProvider = ({ children }) => {
       return await signIn(email, password);
     } catch (apiErr) {
       console.warn('Backend register failed, trying direct Supabase:', apiErr.message);
+
+      // If backend explicitly rejected it (like "User already registered"), don't re-try client side
+      if (apiErr.message && !apiErr.message.includes('fetch') && !apiErr.message.includes('Failed to fetch')) {
+        throw apiErr;
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -78,7 +86,14 @@ export const AuthProvider = ({ children }) => {
           data: metadata,
         },
       });
-      if (error) throw error;
+
+      if (error) {
+        if (error.message?.toLowerCase().includes('rate limit')) {
+          throw new Error('Supabase email rate limit exceeded. Please disable "Confirm email" in your Supabase Dashboard (Authentication -> Providers -> Email) to allow instant registration.');
+        }
+        throw error;
+      }
+
       if (data.session) {
         syncUser(data.session, data.user);
       } else if (data.user) {
@@ -100,7 +115,7 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       // If direct Supabase signIn threw an error, attempt backend fallback login
       console.warn('Client signInWithPassword failed, attempting backend fallback:', err.message);
-      const res = await fetch('http://localhost:5000/api/auth/login', {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

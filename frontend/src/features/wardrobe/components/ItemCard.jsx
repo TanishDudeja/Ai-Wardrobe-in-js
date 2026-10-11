@@ -41,13 +41,13 @@ const ItemCard = ({ item, onClick, onDelete }) => {
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
         
         {/* Ownership badge */}
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-2.5 left-2.5 z-10 max-w-[calc(100%-2.75rem)]">
           {item.userId ? (
-            <span className="bg-primary/80 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-xs">
+            <span className="bg-primary/80 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-xs truncate block whitespace-nowrap">
               My Garment
             </span>
           ) : (
-            <span className="bg-white/80 backdrop-blur-md text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-xs">
+            <span className="bg-white/90 backdrop-blur-md text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-xs truncate block whitespace-nowrap">
               Starter
             </span>
           )}
@@ -55,23 +55,27 @@ const ItemCard = ({ item, onClick, onDelete }) => {
 
         <button
           onClick={handleDelete}
-          className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-red-50 hover:text-red-500 shadow-md"
+          className="absolute top-2.5 right-2.5 z-20 w-7 h-7 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-red-50 hover:text-red-500 shadow-md text-gray-600"
+          title="Delete garment"
         >
-          <Trash2 size={14} />
+          <Trash2 size={13} />
         </button>
       </div>
 
       {/* Info */}
-      <div className="p-4">
-        <h4 className="font-bold text-gray-900 truncate text-sm mb-2">{item.name}</h4>
-        <div className="flex items-center justify-between">
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${colors.bg} ${colors.text}`}>
+      <div className="p-3.5">
+        <h4 className="font-bold text-gray-900 truncate text-xs sm:text-sm mb-2" title={item.name}>
+          {item.name}
+        </h4>
+        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold flex-shrink-0 ${colors.bg} ${colors.text}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${colors.dot}`} />
             {item.category}
           </span>
           {item.color && (
-            <span className="text-xs text-gray-400 capitalize flex items-center gap-1">
-              <Tag size={10} /> {item.color}
+            <span className="text-[10px] text-gray-400 capitalize flex items-center gap-0.5 font-medium truncate max-w-[85px]" title={item.color}>
+              <Tag size={9} className="flex-shrink-0" />
+              <span className="truncate">{item.color}</span>
             </span>
           )}
         </div>

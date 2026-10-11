@@ -36,14 +36,18 @@ const WardrobeGrid = ({ onSelectItem }) => {
   const fetchItems = async () => {
     try {
       setLoading(true);
-      const url = user?.id 
-        ? `${API_URL}/api/wardrobe?userId=${encodeURIComponent(user.id)}`
-        : `${API_URL}/api/wardrobe`;
+      if (!user?.id) {
+        setItems([]);
+        setLoading(false);
+        return;
+      }
+      const url = `${API_URL}/api/wardrobe?userId=${encodeURIComponent(user.id)}`;
       const res = await fetch(url);
       const data = await res.json();
       setItems(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to fetch wardrobe:', error);
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -120,6 +124,10 @@ const WardrobeGrid = ({ onSelectItem }) => {
   // Filter + Search + Sort
   const filteredItems = items
     .filter(item => {
+      // Security: Never display items belonging to another user
+      if (item.userId && item.userId !== user?.id) {
+        return false;
+      }
       const matchesCategory = activeFilter === 'All' || item.category?.toLowerCase() === activeFilter.toLowerCase();
       const matchesSearch = item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.color?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -127,7 +135,7 @@ const WardrobeGrid = ({ onSelectItem }) => {
         ownershipFilter === 'all'
           ? true
           : ownershipFilter === 'mine'
-          ? !!item.userId && item.userId === user?.id
+          ? item.userId === user?.id
           : !item.userId;
       return matchesCategory && matchesSearch && matchesOwnership;
     })

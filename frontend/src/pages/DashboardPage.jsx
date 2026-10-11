@@ -27,12 +27,14 @@ const DashboardPage = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
   // Handle deletion of an item
   const handleDeleteItem = async (id) => {
     try {
       const url = user?.id
-        ? `http://localhost:5000/api/wardrobe/${id}?userId=${encodeURIComponent(user.id)}`
-        : `http://localhost:5000/api/wardrobe/${id}`;
+        ? `${API_URL}/api/wardrobe/${id}?userId=${encodeURIComponent(user.id)}`
+        : `${API_URL}/api/wardrobe/${id}`;
       await fetch(url, { method: 'DELETE' });
       setSelectedItem(null);
       window.dispatchEvent(new Event('wardrobe_updated'));
